@@ -1,0 +1,6 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^Meta$
+^doc$
+^CRAN-RELEASE$
+^cran-comments\.md$
