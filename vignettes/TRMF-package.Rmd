@@ -19,19 +19,21 @@ knitr::opts_chunk$set(
 This package contains a set of functions that factor a time series matrix into a set
 of latent time series. Given a time series matrix $A$, alternating least squares is used to estimate the solution to the following equation:
 
-$$\left (X,F\right) = \arg \min \limits_{X_m,F_m \in \Theta} \left( ||W\circ \left(X_m F_m-A \right)||_F^2+\lambda_f^2 ||F_m||_F^2 + \sum\limits_{s} R_s(X_m)\right)$$
-where $W$ is a weighting matrix the same size as $A$ and has 0's where $A$ has missing values. $\Theta$ is a constraint set for $F$, possible values are non-negative for NNLS-type solutions, or in the interval $[0,1]$ or non-negative and sum row-wise to 1 for probability-like solutions. 
+$$\left (X,F\right) = \arg \min \limits_{X_m,F_m \in \Theta} \left( ||W\circ \left(X_m F_m-A \right)||^2_F+\sum\limits_{i}(F_{m(i)}-\mu0)^T\Lambda (F_{m(i)}-\mu0) + \lambda_x^2 ||X_m||^2_F + \sum\limits_{s} R_s(X_m)\right)$$
+where $W$ is a weighting matrix the same size as $A$ and has 0's where $A$ has missing values and $||\cdot||_F$ is the Frobenius norm. $\Theta$ is a constraint set for $Fm$, possible values are non-negative solutions, or in the interval $[0,1]$ or non-negative and sum row-wise to 1 for probability-like solutions. 
 
 The last term does the temporal regularization
-$$R_s(X) = \lambda_D^2||W_s(LX_s)||_2^2+\lambda_A^2||X_s||_2^2$$
-where $L$ is a graph-Laplacian matrix, $X_s$ is a subset of the columns of $X$, and $W_s$ is a diagonal weight matrix. An example of $L$ is a finite difference matrix  $D_{\alpha}$ approximating a derivative of order $\alpha$. In this case, if $\alpha = 2$ then the regularization prefers penalized cubic spline solutions. If $\alpha=1$ then it can be used to fit a random walk.
+$$R_s(X) = \lambda_D^2||W_s(LX_s)||_2^2$$
+where $L$ is a graph-Laplacian matrix, $X_s$ is a subset of the columns of $X$ and $W_s$ is a diagonal weight matrix. An example of $L$ is a finite difference matrix  $D_{\alpha}$ approximating a derivative of order $\alpha$. In this case, if $\alpha = 2$ then the regularization prefers penalized cubic spline solutions. If $\alpha=1$ then it can be used to fit a random walk.
 
 #### TRMF plus Regression
 If necessary, external regressors can be included in matrix factorization by modifying the first term to include the external regressor:
 
-$$\left (X,F\right) = \arg \min \limits_{X_m,F_m \in \Theta} \left( ||W\circ \left([X_m, E_x]F_m -A \right)||_F^2+\lambda_f^2 ||F_m||_F^2 + \sum\limits_{s} R_s(X_m)\right)$$
+$$\left (X,F\right) = \arg \min \limits_{X_m,F_m \in \Theta} \left( ||W\circ \left(E_xF^{(1)}_m+X_m F^{(2)}_m -A \right)||_F+\sum\limits_{i}(F_{m(i)}-\mu0)^T\Lambda (F_{m(i)}-\mu0) + \lambda_x^2 ||X_m||_F + \sum\limits_{s} R_s(X_m)\right)$$
 
 
+
+ 
 
 #### References:
 Yu, Hsiang-Fu, Nikhil Rao, and Inderjit S. Dhillon. "High-dimensional time series prediction with missing values." arXiv preprint arXiv:1509.08333 (2015).
