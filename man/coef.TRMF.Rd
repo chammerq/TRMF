@@ -5,7 +5,7 @@
 Extract TRMF Coefficients (Fm)
 }
 \description{
-Returns the Fm (transposed) matrix from the matrix factorization Xm*Fm.
+Returns the Fm (transposed) matrix from the matrix factorization Xm*Z*Fm.
 }
 \usage{
 \method{coef}{TRMF}(object, ...)

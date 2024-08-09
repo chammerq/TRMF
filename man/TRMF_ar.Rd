@@ -20,8 +20,9 @@ TRMF_ar(obj,numTS = 1,AR,lambdaD=1,lambdaA=0.0001,weight=1)
 
 }
 \details{
-Setting AR = c(1) gives a random walk model, same as \code{TRMF_trend(..., order=1)}
+Setting AR = c(1) gives a random walk model, same as \code{TRMF_trend(..., order=1)}.
 }
+\note{Unlike \code{TRMF_columns()}, these lambdas are squared in the code.}
 \value{
 Returns an updated object of class TRMF.
 }

@@ -5,19 +5,22 @@
 Retrain TRMF objects.
 }
 \description{
-Continue training on a pretrained TRMF object.
+Continue training on a pre-trained TRMF object.
 }
 \usage{
-retrain(obj, numit, fit_xm_first = TRUE)
+retrain(obj, numit, fit_xm_first = TRUE,Xm=NULL,Fm=NULL,Z=NULL)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{obj}{Pretrained TRMF object}
+  \item{obj}{Pre-trained TRMF object}
   \item{numit}{Number of training iterations}
   \item{fit_xm_first}{Fit the Xm factor first? This could be useful it modifications are made to one of the factors that we don't want to be overwritten.}
+  \item{Xm}{Optional update to Xm matrix. See details}
+  \item{Fm}{Optional update to Fm matrix. See details}
+  \item{Z}{Optional update to Z vector. See details}
 }
 \details{
-This is basically the same function as \code{train()} but it doesn't create any of the constraint matrices and doesn't do any initialization.
+This is basically the same function as \code{train()} but it doesn't create any of the constraint matrices and doesn't do any initialization. train() must be called on obj before this function. If external regressors are in the model and Fm is provided, the number of rows of columns must equal number of regressors plus columns of Xm. The format of Fm in this case is: [column_xreg_parameters,global_xreg_parameters,Fm_parameters]^T.
 }
 \value{
 A trained TRMF object.

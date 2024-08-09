@@ -20,6 +20,7 @@ TRMF_seasonal(obj,numTS = 1,freq = 12,sumFirst=FALSE,lambdaD=1,lambdaA=0.0001,we
 \details{
  \code{TRMF_seasonal(freq=N)} fits a lag N random walk. For monthly data, use freq=12, for quarterly data, freq=4. If \code{sumFirst = TRUE}, (called this for legacy reasons), a different regularization matrix is used which minimizes a rolling sum of length \code{freq} in the latent time series. This can be useful to prevent drift and force the seasonal component to vary around a zero mean.
 }
+\note{Unlike \code{TRMF_columns()}, these lambdas are squared in the code.}
 \value{
 Returns an updated object of class TRMF.
 }

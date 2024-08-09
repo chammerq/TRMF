@@ -18,9 +18,9 @@ TRMF_trend(obj,numTS = 1,order = 1,lambdaD=1,lambdaA=0.0001,weight=1)
   \item{weight}{optional vector of weights to weight constraints, i.e. R(x) = lambdaD^2*||w*(D\%*\%X)||^2}
 }
 \details{
-An arbitrary number of time series models can be added. \code{TRMF_trend(order = 1)} fits a random walk. \code{TRMF_trend(order = 2)} fits a cubic smoothing spline. For a single time series, \code{TRMF_trend(order = 2)} is basically equivalent to the Hodge-Prescot filter. A fractional value for order minimizes a squared fractional derivative. A negative value minimizes a (possibly fractional order) squared integral of time-series. Using a fractional or negative order for \code{TRMF_trend} or using \code{TRMF_es} could drastically reduce the sparsity of constraint matrix and slow down training. Fractional or negative order has only been lightly tested, so use with care.
-
+An arbitrary number of time series models can be added. \code{TRMF_trend(order = 1)} fits a random walk. \code{TRMF_trend(order = 2)} fits a cubic smoothing spline. For a single time series, \code{TRMF_trend(order = 2)} is basically equivalent to the Hodge-Prescot filter. A fractional value for order minimizes a squared fractional derivative. A negative value minimizes a (possibly fractional order) squared integral of time-series. Using a fractional or negative order for \code{TRMF_trend} could drastically reduce the sparsity of constraint matrix and slow down training. Fractional or negative order has only been lightly tested, so use with care. 
 }
+\note{Unlike \code{TRMF_columns()}, these lambdas are squared in the code.}
 \value{
 Returns an updated object of class TRMF.
 }

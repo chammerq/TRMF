@@ -7,7 +7,8 @@
 create_TRMF(dataM, weight = 1, 
       normalize = c("none", "standard", "robust", "range"),
       normalize.type = c("global", "columnwise", "rowwise"),
-      na.action = c("impute", "fail"))
+      na.action = c("impute", "fail"),
+      scaleXm = c("no","project","track"))
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -20,9 +21,11 @@ create_TRMF(dataM, weight = 1,
   \item{normalize.type}{how should normalization be applied. \code{global} scales and centers matrix by one value. \code{columnwise} and \code{rowwise}
   normalize each column or row separately.}
   \item{na.action}{what action to take when data contains NAs}
+  \item{scaleXm}{Should the columns of Xm be rescaled at each iteration. See details}
 }
 \details{
 This function doesn't do any computation, it is the entry point for creating a TRMF model. To train the model or add additional details, see examples. Normalization is recommended in general. Regularization biases the factorization toward zero a little bit, centering changes that to bias towards the mean. Scaling makes the choosing of regularization parameters easier. If the factorization is to be used for forward forecasting, rowwise normalization is not recommended as it could remove some temporal information.
+If \code{scaleXm} = 'project' then the columns of Xm will be rescaled to have sum squared value = 1. If set to 'track' then the scaling factors will be stored and updated and used scale Fm before fitting Xm at each iteration.These options were added to allow for more stable behavior of temporal regularization.
 }
 \value{
 \code{create_TRMF} returns an object of \code{\link{class}} "\code{TRMF}" to be passed to other TRMF functions.

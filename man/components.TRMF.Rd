@@ -6,10 +6,10 @@
  Access TRMF factors
 }
 \description{
-This function returns the factors (Xm, Fm) from a trained TRMF object
+This function returns the factors (Xm, Fm,Z) from a trained TRMF object
 }
 \usage{
-\method{components}{TRMF}(object, XorF = c("Xm","Fm"), ...)
+\method{components}{TRMF}(object, XorF = c("Xm","Fm","Z","Fm_each"), ...)
 }
 
 \arguments{
@@ -18,10 +18,10 @@ This function returns the factors (Xm, Fm) from a trained TRMF object
   \item{...}{ignored}
 }
 \details{
-Returns the matrix factors. Could also use \code{object$Factors$Xm, object$Factors$Fm} . If matrix normalization was used in \code{\link{create_TRMF}}, \code{Xm\%*\%Fm} could look much different than the input data matrix. 
+Returns the matrix factors.  If matrix normalization was used in \code{\link{create_TRMF}}, \code{Xm\%*\%diag(Z)\%*\%Fm} could look much different than the input data matrix. If external regressor were included in the model and \code{XorF = "F_each"} then a returns a list with Fm split up by parts.
 }
 \value{
-A matrix.
+A matrix or vector, or a possibly a list if \code{XorF = "F_each"}.
 }
 \author{
 Chad Hammerquist
