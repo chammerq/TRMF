@@ -1,7 +1,7 @@
 Package: TRMF
 Type: Package
 Title: Temporally Regularized Matrix Factorization
-Version: 0.1.5
+Version: 0.2.1
 Author: Chad Hammerquist [aut, cre],
     Scentsy Inc [cph]
 Maintainer: Chad Hammerquist <chammerquist@scentsy.com>
