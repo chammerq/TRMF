@@ -49,7 +49,6 @@ summary.TRMF = function(object,...){
    }
 }
 
-
 plot.TRMF= function(x, ...){
   dots = list(...)
   if(is.null(x$Fit)){
@@ -72,7 +71,6 @@ plot.TRMF= function(x, ...){
   }
 
 }
-
 
 residuals.TRMF = function(object,...){
   if(is.null(object$Fit)){
@@ -160,7 +158,6 @@ predict.TRMF = function(object, newdata=NULL, ...){
       if(dim(cXreg)[2] !=  dim(object$dataM)[2]){
         stop("Number of columns of new external local regressor (cXreg) doesn't match that of the model")
       }
-
     }
   }
   
@@ -181,9 +178,8 @@ predict.TRMF = function(object, newdata=NULL, ...){
   return(nPred)
 }
 
-
-components.TRMF = function(object,XorF=c("Xm","Fm"),...){
-  XorF = match.arg(tolower(XorF),c("xm","fm"))
+components.TRMF = function(object,XorF=c("Xm","Fm","Z","Fm_each"),...){
+  XorF = match.arg(tolower(XorF),c("xm","fm","z","fm_each"))
   if(is.null(object$Fit)){
     print("TRMF model has not been fitted yet")
   }else{
@@ -193,14 +189,59 @@ components.TRMF = function(object,XorF=c("Xm","Fm"),...){
     if(XorF == "fm"){
       return(object$Factors$Fm)
     }
+    if(XorF == "z"){
+      return(object$Factors$Z)
+    }
+    if(XorF == "fm_each"){
+      fm_list = list()
+      if(!is.null(object$xReg_model)){
+        if(!is.null(object$xReg_model$cXregInd)){
+          fm_list$Fm_cXreg = object$Factors$Fm[object$xReg_model$cXregInd,] 
+        }
+        if(!is.null(object$xReg_model$gXregInd)){
+          fm_list$Fm_gXreg = object$Factors$Fm[object$xReg_model$gXregInd,] 
+        }
+        fm_list$Fm_ts = object$Factors$Fm[object$xReg_model$XmInd,]
+      }else{
+        fm_list$Fm_ts = object$Factors$Fm
+      }
+      return(fm_list)
+    }
   }
   return(NULL)
 }
 
-
-retrain = function(obj,numit,fit_xm_first=TRUE){
+retrain = function(obj,numit,fit_xm_first=TRUE,Xm=NULL,Fm=NULL,Z=NULL){
   
   ptr = list2env(obj,envir = new.env())
+  if(is.null(obj$Factors)||is.null(obj$Fm_Settings$Constraints)||is.null(obj$Xm_Settings$RHS)){
+    stop("retrain: train.TRMF must be called before retrain to set up calculations")
+  }
+  
+  # Add in Z
+  if(!is.null(Z)){
+    Z = c(Z)
+    if(length(Z) != length(ptr$Factors$Z)){
+      stop("train.TRMF: provided Z is the wrong length")
+    }
+    ptr$Factors$Z = Z
+  }
+  
+  # If Xm or Fm provided, check and put in
+  if(!is.null(Xm)){
+    if(any(dim(Xm) != dim(ptr$Factors$Xm))){
+      stop("train.TRMF: provided Xm is the wrong size")
+    }
+    ptr$Factors$Xm = Xm
+  }
+  else if(!is.null(Fm)){
+    fit_xm_first = TRUE
+    if(any(dim(Fm) != c(ptr$Dims$total_coef,ptr$Dims$ncols))){
+      stop("train.TRMF: provided Fm is the wrong size")
+    }
+    ptr$Factors$Fm = Fm
+  }
+  
   
   if(fit_xm_first){
     step =c(expression(FitXm(ptr)),expression(FitFm(ptr)))
@@ -216,8 +257,6 @@ retrain = function(obj,numit,fit_xm_first=TRUE){
   
   # get the fit
   FitAll(ptr)
-  
-
   
   # format back as object
   newobj=as.list(ptr)

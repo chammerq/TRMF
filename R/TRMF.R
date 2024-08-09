@@ -1,7 +1,8 @@
 # Create initial model
 create_TRMF = function(dataM,weight=1,normalize=c("none","standard","robust","range"),
                        normalize.type = c("global","columnwise","rowwise"),
-                       na.action=c("impute","fail")){
+                       na.action=c("impute","fail"),
+                       scaleXm = c("no","project","track")){
   
   dataM = as.matrix(dataM)
   
@@ -23,6 +24,10 @@ create_TRMF = function(dataM,weight=1,normalize=c("none","standard","robust","ra
     stop("Infinite values in weights")
   }
   
+  # Check normalize types
+  normalize = match.arg(normalize)
+  normalize.type = match.arg(normalize.type)
+  
   # Attributes
   Dims = list(nrows = dim(dataM)[1],ncols = dim(dataM)[2],numTS=0)
   
@@ -39,52 +44,33 @@ create_TRMF = function(dataM,weight=1,normalize=c("none","standard","robust","ra
   weight[is.na(weight)]=0
   Weight = weight*HadamardProjection
   
+  # Scale Xm?
+  scaleXm = match.arg(tolower(scaleXm),c("no","project","track"))
+  if(scaleXm != "no"){
+    if(scaleXm != "project"&& scaleXm != "track"){
+      stop("create_TRMF: scaleXm option not recognized")
+    }
+  }else{
+    scaleXm = NULL
+  }
+  
   # Create TRMF object
   trmf_object = list(dataM = dataM,NormalizedData = NormalizedData,HadamardProjection=HadamardProjection,
-                     Weight=Weight,Dims = Dims,HasXreg=FALSE)
+                     Weight=Weight,Dims = Dims,HasXreg=FALSE,scaleXm=scaleXm)
   
   class(trmf_object) = "TRMF"
+  
+
   
   return(trmf_object)
   
 }
 
-# Add coefficient model
-TRMF_coefficients = function(obj,reg_type =c("l2","nnls","constrain","interval","none"),lambda=0.0001){
+
+TRMF_columns = function(obj,reg_type =c("l2","nnls","constrain","interval","none"),lambda=0.0001,mu0=NULL){
   
   # check object
-  if(is.null(obj)||class(obj) != "TRMF"){
-    stop("TRMF_coefficients: Create a valid TRMF object first using create_TRMF()")
-  }
-  
-  if(!is.null(obj$Fm_settings)){
-    warning("TRMF_coefficient model already defined, overwriting")
-  }
-  
-  # screen constraint type
-  type = match.arg(reg_type)
-  if(!(type %in%c("l2","nnls","constrain","interval","none"))){
-    stop("TRMF_coefficients: Coefficient regularization type not valid (at least not currently implemented)")
-    # could also add interval at some point.
-  }
-  
-  # verify lambda
-  if(type=="none"){
-    lambda=0
-  }
-  
-  
-  # update object
-  obj$Fm_Settings = list(type=type,lambda=lambda)
-  
-  return(obj)
-}
-
-
-TRMF_columns = function(obj,reg_type =c("l2","nnls","constrain","interval","none"),lambda=0.0001){
-  
-  # check object
-  if(is.null(obj)||class(obj) != "TRMF"){
+if(!inherits(obj,"TRMF")){
     stop("TRMF_columns: Create a valid TRMF object first using create_TRMF()")
   }
   
@@ -96,27 +82,27 @@ TRMF_columns = function(obj,reg_type =c("l2","nnls","constrain","interval","none
   type = match.arg(reg_type)
   if(!(type %in%c("l2","nnls","constrain","interval","none"))){
     stop("TRMF_columns: columns regularization type not valid (at least not currently implemented)")
-    # could also add interval at some point.
   }
-  
   # verify lambda
-  if(type=="none"){
+  if(type=="none"||is.null(lambda)){
     lambda=0
   }
-  
+
+  if(is.null(mu0)){
+    mu0 = 0
+  }
   
   # update object
-  obj$Fm_Settings = list(type=type,lambda=lambda)
+  obj$Fm_Settings = list(type=type,lambda=lambda,mu0=mu0)
   
   return(obj)
 }
-
 
 # Add slope constraint model
 TRMF_trend = function(obj,numTS = 1,order = 1,lambdaD=1,lambdaA=0.0001,weight=1){
   
   # verify object
-  if(is.null(obj)||class(obj) != "TRMF"){
+if(!inherits(obj,"TRMF")){
     stop("TRMF_trend: Create a valid TRMF object first using create_TRMF()")
   }
   
@@ -150,12 +136,6 @@ TRMF_trend = function(obj,numTS = 1,order = 1,lambdaD=1,lambdaA=0.0001,weight=1)
     stop("TRMF_trend: weight vector is wrong size")
   }
   
-  #sumwt = 1/mean(weight)
-  #if(is.infinite(sumwt)||is.na(sumwt)){
-  #  stop("TRMF_trend: weight vector not valid")
-  #}else{
-  #  weight = weight/sumwt
-  #}
   
   WeightD = diag(x=lambdaD*weight,nrow=nrows)
   
@@ -177,12 +157,11 @@ TRMF_trend = function(obj,numTS = 1,order = 1,lambdaD=1,lambdaA=0.0001,weight=1)
   return(obj)
 }
 
-
 # No temporal structure
 TRMF_simple = function(obj,numTS = 1,lambdaA=0.0001,weight=1){
   
   # verify object
-  if(is.null(obj)||class(obj) != "TRMF"){
+if(!inherits(obj,"TRMF")){
     stop("TRMF_trend: Create a valid TRMF object first using create_TRMF()")
   }
   
@@ -196,7 +175,6 @@ TRMF_simple = function(obj,numTS = 1,lambdaA=0.0001,weight=1){
     return(obj)
   }
   
-  
   if(length(lambdaA)!=1){
     stop("TRMF_simple: the regularization parameter (lambda) must be scalar")
   }
@@ -209,7 +187,6 @@ TRMF_simple = function(obj,numTS = 1,lambdaA=0.0001,weight=1){
     xm_it = length(obj$Xm_models)+1
   }
   
-  
   # Check weight input, make weights have mean 1, put in matrix form
   nrows = obj$Dims$nrows
   if((length(weight)!=1)&&(length(weight)!=nrows)){
@@ -217,8 +194,6 @@ TRMF_simple = function(obj,numTS = 1,lambdaA=0.0001,weight=1){
   }
   
   WeightA = diag(x=lambdaA*weight,nrow=nrows)
-  
-  
   
   # Overall regularization
   WeightD = diag(x=0,nrow=nrows) # this is here to make consistent with other models
@@ -237,7 +212,7 @@ TRMF_simple = function(obj,numTS = 1,lambdaA=0.0001,weight=1){
 TRMF_seasonal = function(obj,numTS = 1,freq = 12,sumFirst=FALSE,lambdaD=1,lambdaA=0.0001,weight=1){
   
   # verify object
-  if(is.null(obj)||class(obj) != "TRMF"){
+if(!inherits(obj,"TRMF")){
     stop("TRMF_seasonal: Create a valid TRMF object first using create_TRMF()")
   }
   
@@ -250,7 +225,6 @@ TRMF_seasonal = function(obj,numTS = 1,freq = 12,sumFirst=FALSE,lambdaD=1,lambda
   if(numTS<1){
     return(obj)
   }
-  
   
   if(round(freq) != freq){
     message("TRMF_seasonal: Non-integer frequencies (freq) currently rounded to nearest integer")
@@ -310,7 +284,7 @@ TRMF_seasonal = function(obj,numTS = 1,freq = 12,sumFirst=FALSE,lambdaD=1,lambda
 TRMF_ar = function(obj,numTS = 1,AR,lambdaD=1,lambdaA=0.0001,weight=1){
   
   # verify object
-  if(is.null(obj)||class(obj) != "TRMF"){
+if(!inherits(obj,"TRMF")){
     stop("TRMF_AR: Create a valid TRMF object first using create_TRMF()")
   }
   
@@ -366,80 +340,11 @@ TRMF_ar = function(obj,numTS = 1,AR,lambdaD=1,lambdaA=0.0001,weight=1){
   return(obj)
 }
 
-# Add an exponential smoothing model
-TRMF_es = function(obj,numTS = 1,alpha=1,es_type=c("single","double"),lambdaD=1,lambdaA=0.0001 ,weight=1){
-  
-  # verify object
-  if(is.null(obj)||class(obj) != "TRMF"){
-    stop("TRMF_ES: Create a valid TRMF object first using create_TRMF()")
-  }
-  
-  if(any(is.infinite(weight))){
-    stop("TRMF_es: Infinite values in weights")
-  }
-  
-  # check inputs
-  numTS = as.integer(numTS)
-  if(numTS<1){
-    return(obj)
-  }
-  
-  
-  if((length(lambdaD)!=1)||(length(lambdaA)!=1)){
-    stop("TRMF_ES: the regularization parameters (lambda) must be scalars")
-  }
-  
-  es_type = match.arg(es_type)
-  if(es_type=="single"){
-    order = 1
-    prefix =""
-  }else if(es_type=="double"){
-    order = 2
-    prefix ="D"
-  }else{
-    stop("TRMF_ES: exponential smoothing type not valid")
-  }
-  
-  # list of rules for Xm
-  if(is.null(obj$Xm_models)){
-    xm_it = 1
-    obj$Xm_models=list()
-  }else{
-    xm_it = length(obj$Xm_models)+1
-  }
-  
-  
-  # Check weight input, make weights have mean 1, put in matrix form
-  nrows = obj$Dims$nrows
-  if((length(weight)!=1)&&(length(weight)!=nrows)){
-    stop("TRMF_ES: weight vector is wrong size")
-  }
-  
-  WeightD = diag(x=lambdaD*weight,nrow=nrows)
-  
-  # Create finite difference constraint
-  WeightD = diag(x=lambdaD*weight,nrow=nrows)
-  Dmat = ExpSmMat(nrows,alpha,order)
-  Dmat = WeightD%*%Dmat
-  
-  # Overall regularization
-  WeightA = diag(x=lambdaA,nrow=nrows)
-  
-  # Create Xm object
-  XmObj = list(Rm = Dmat,WA = WeightA)
-  XmObj$model =list(type = "ES",alpha=alpha,order=order,numTS=numTS)
-  XmObj$model$name = paste(es_type," exponential smoothing with ",numTS," latent time series",sep="",collapse="")
-  XmObj$model$colnames = paste(prefix,"ES",round(alpha,2),"(",1:numTS,")",sep="")
-  obj$Xm_models[[xm_it]] = XmObj
-  obj$Dims$numTS=obj$Dims$numTS+numTS
-  return(obj)
-}
-
 # Add a Regression model
 TRMF_regression = function(obj,Xreg,type=c("global","columnwise")){
   
   # verify object
-  if(is.null(obj)||class(obj) != "TRMF"){
+if(!inherits(obj,"TRMF")){
     stop("TRMF_Regression: Create a valid TRMF object first using create_TRMF()")
   }
   
@@ -520,29 +425,17 @@ TRMF_regression = function(obj,Xreg,type=c("global","columnwise")){
     
     # create names
     obj$xReg_model$cxname = paste("cXreg(",1:dimX[3],")",sep="")
-    
-    # Old attempt, not really possible to get names to line up in this case
-    #cnames = dimnames(Xreg)[[2]]
-    #if(is.null(cnames)){
-    #  cnames = paste("cXreg(",1:dimX[3],sep=")")
-    #}else{
-    #  cnames = paste("cXreg(",cnames,sep=")")
-    #}
-    #obj$xReg_model$cxname = cnames
-    
-    
+
   }
   
   return(obj)
 }
 
 # Fit TRMF model
-#train_TRMF = function(obj,numit=10){
-  
-train.TRMF = function(x,numit=10,...){
+train.TRMF = function(x,numit=10,Xm=NULL,Fm=NULL,Z=NULL,...){
   obj = x
   # check object to see if it valid object
-  if(is.null(obj)||class(obj) != "TRMF"){
+if(!inherits(obj,"TRMF")){
     # should never get here...
     stop("Not a valid TRMF object")
   }
@@ -558,32 +451,63 @@ train.TRMF = function(x,numit=10,...){
   }
   
   # Set up stuff
-  localEnv = list2env(obj,envir = new.env())
-  Create_Xreg_Stuff(localEnv)
-  Create_Fm_Stuff(localEnv)
-  Create_Xm_Stuff(localEnv)
+  ptr = list2env(obj,envir = new.env())
+  Create_Xreg_Stuff(ptr)
+  Create_Fm_Stuff(ptr)
+  Create_Xm_Stuff(ptr)
+  Create_Z_Stuff(ptr)
   
-  # Run ALS iteration
-  InitializeALS(localEnv)
-  if(numit<=0){      
-    Get_XReg_fit(localEnv)
-    FitXm(localEnv)
-  }
-  else{
-    for(k in 1:numit){
-      Get_XReg_fit(localEnv)
-      FitXm(localEnv)
-      FitFm(localEnv)
+  # Add in Z
+  if(!is.null(Z)){
+    Z = c(Z)
+    if(length(Z) != length(ptr$Factors$Z)){
+      stop("train.TRMF: provided Z is the wrong length")
     }
+    ptr$Factors$Z = Z
   }
-    
-    # get fit
-    FitAll(localEnv)
-
-
   
+  # If nothing, have to initialize
+  if(is.null(Xm)&&is.null(Fm)){
+    fit_xm_first = FALSE
+    InitializeALS(ptr)
+    FitXm(ptr)
+  }
+  
+  # If Xm or Fm provided, check and put in
+  if(!is.null(Xm)){
+    if(!is.null(Fm)){
+      warning("train.TRMF: both Xm and Fm are provided. Fm will be over-written")
+    }
+    fit_xm_first = FALSE
+    if(any(dim(Xm) != dim(ptr$Factors$Xm))){
+      stop("train.TRMF: provided Xm is the wrong size")
+    }
+    ptr$Factors$Xm = Xm
+  }else if(!is.null(Fm)){
+    fit_xm_first = TRUE
+    if(any(dim(Fm) != c(ptr$Dims$total_coef,ptr$Dims$ncols))){
+      stop("train.TRMF: provided Fm is the wrong size")
+    }
+    ptr$Factors$Fm = Fm
+  }
+  
+  if(fit_xm_first){
+    step =c(expression(FitXm(ptr)),expression(FitFm(ptr)))
+  }else{
+    step =c(expression(FitFm(ptr)),expression(FitXm(ptr)))
+  }
+  
+  for(k in 1:numit){
+    Get_XReg_fit(ptr)
+    eval(step[1])
+    eval(step[2])
+  }
+  
+  # get the fit
+  FitAll(ptr)
+
   # format back as object
-  newobj=as.list(localEnv)
+  newobj=as.list(ptr)
   class(newobj) = class(obj)
   return(newobj)
   
@@ -592,7 +516,7 @@ train.TRMF = function(x,numit=10,...){
 impute_TRMF= function(obj){
   
   # check object to see if it valid object
-  if(is.null(obj)||class(obj) != "TRMF"){
+if(!inherits(obj,"TRMF")){
     stop("Not a valid TRMF object")
   }
   
@@ -609,3 +533,4 @@ impute_TRMF= function(obj){
   return(newM)
   
 }
+
